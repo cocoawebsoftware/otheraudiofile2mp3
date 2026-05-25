@@ -144,7 +144,10 @@ a{
 
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.6/dist/ffmpeg.min.js"></script>
+<!-- 修正版 -->
+<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
+
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 
 <script>
@@ -216,14 +219,15 @@ convertBtn.onclick = async () => {
         return;
     }
 
-    const { FFmpeg } = FFmpegWASM;
-
-    const ffmpeg = new FFmpeg();
-
     convertBtn.disabled = true;
-    convertBtn.textContent = "読み込み中...";
+    convertBtn.textContent = "ffmpeg読込中...";
 
-    await ffmpeg.load();
+    const ffmpeg = new FFmpeg.FFmpeg();
+
+    await ffmpeg.load({
+        coreURL:
+            "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js"
+    });
 
     const zip = new JSZip();
 
@@ -244,8 +248,9 @@ convertBtn.onclick = async () => {
             const outputName =
                 file.name.replace(/\.[^/.]+$/, "") + ".mp3";
 
-            const data =
-                new Uint8Array(await file.arrayBuffer());
+            const data = new Uint8Array(
+                await file.arrayBuffer()
+            );
 
             await ffmpeg.writeFile(inputName, data);
 
@@ -271,6 +276,8 @@ convertBtn.onclick = async () => {
         }catch(err){
 
             console.error(err);
+
+            ui.className = "file-before";
 
             ui.innerHTML = `
                 <div class="name">❌ ${file.name}</div>
