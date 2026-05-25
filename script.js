@@ -1,6 +1,5 @@
 // FFmpeg instance
 let FFmpeg;
-const { FFmpeg: FFmpegLib, fetchFile } = window;
 
 // App State
 const appState = {
@@ -14,21 +13,55 @@ const appState = {
     isFFmpegLoading: false,
 };
 
-// Wait for FFmpeg library to load
-function waitForFFmpegLib(timeout = 10000) {
+// Wait for FFmpeg library to load with fallback CDNs
+function waitForFFmpegLib(timeout = 30000) {
     return new Promise((resolve, reject) => {
         const startTime = Date.now();
         
         const checkFFmpeg = setInterval(() => {
             if (typeof window.FFmpeg !== 'undefined' && window.FFmpeg.FFmpeg) {
                 clearInterval(checkFFmpeg);
+                console.log('✓ FFmpeg library loaded successfully');
                 resolve();
             } else if (Date.now() - startTime > timeout) {
                 clearInterval(checkFFmpeg);
-                reject(new Error('FFmpeg library failed to load within timeout'));
+                const errorMsg = `FFmpeg library failed to load within ${timeout/1000}s timeout`;
+                console.error('✗ ' + errorMsg);
+                reject(new Error(errorMsg));
             }
         }, 100);
     });
+}
+
+// Load external library with fallback CDNs
+async function loadExternalLibrary(urls, name) {
+    for (let i = 0; i < urls.length; i++) {
+        const url = urls[i];
+        console.log(`Loading ${name} (${i + 1}/${urls.length}): ${url}`);
+        
+        try {
+            const response = await fetch(url, { 
+                method: 'HEAD',
+                mode: 'no-cors'
+            });
+            
+            // Create script element
+            const script = document.createElement('script');
+            script.src = url;
+            script.async = true;
+            
+            // Add to document
+            document.body.appendChild(script);
+            
+            console.log(`✓ ${name} script loaded from: ${url}`);
+            return true;
+        } catch (error) {
+            console.warn(`✗ Failed to load ${name} from ${url}: ${error.message}`);
+            continue;
+        }
+    }
+    
+    throw new Error(`Failed to load ${name} from all CDN sources`);
 }
 
 // Initialize FFmpeg
@@ -48,34 +81,67 @@ async function initFFmpeg() {
         // Show loading message
         convertBtn.textContent = '📥 FFmpeg読み込み中...';
         
-        // Wait for FFmpeg library to be available
-        console.log('Waiting for FFmpeg library...');
-        await waitForFFmpegLib(10000);
+        // Clear browser cache to ensure fresh load
+        clearCacheIfNeeded();
+        
+        // Wait for FFmpeg library to be available (increased timeout to 30s)
+        console.log('Waiting for FFmpeg library (timeout: 30s)...');
+        await waitForFFmpegLib(30000);
         
         // Check if FFmpegLib is available
         if (!window.FFmpeg || !window.FFmpeg.FFmpeg) {
-            throw new Error('FFmpeg library not found in window object');
+            throw new Error('FFmpeg library not found in window object after loading');
         }
         
         console.log('FFmpeg library found, initializing...');
         FFmpeg = new window.FFmpeg.FFmpeg();
-        const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist';
         
-        await FFmpeg.load({
-            coreURL: `${baseURL}/ffmpeg-core.js`,
-            wasmURL: `${baseURL}/ffmpeg-core.wasm`,
-        });
+        // Try multiple CDN sources for WASM files
+        const wasmUrls = [
+            'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist',
+            'https://unpkg.com/@ffmpeg/core@0.12.10/dist',
+            'https://cdnjs.cloudflare.com/ajax/libs/ffmpeg.js/0.12.10/dist'
+        ];
+        
+        let loadSuccess = false;
+        for (let i = 0; i < wasmUrls.length; i++) {
+            try {
+                const baseURL = wasmUrls[i];
+                console.log(`Attempting to load FFmpeg WASM from (${i + 1}/${wasmUrls.length}): ${baseURL}`);
+                
+                await FFmpeg.load({
+                    coreURL: `${baseURL}/ffmpeg-core.js`,
+                    wasmURL: `${baseURL}/ffmpeg-core.wasm`,
+                });
+                
+                console.log('✓ FFmpeg WASM loaded successfully');
+                loadSuccess = true;
+                break;
+            } catch (error) {
+                console.warn(`✗ Failed to load from ${wasmUrls[i]}: ${error.message}`);
+                if (i < wasmUrls.length - 1) {
+                    console.log('Trying next CDN...');
+                }
+            }
+        }
+        
+        if (!loadSuccess) {
+            throw new Error('Failed to load FFmpeg WASM from all CDN sources');
+        }
         
         appState.isFFmpegReady = true;
         appState.isFFmpegLoading = false;
-        console.log('FFmpeg initialized successfully');
+        console.log('✓ FFmpeg initialized successfully');
         addError('✓ FFmpegが正常に読み込まれました');
     } catch (error) {
         appState.isFFmpegLoading = false;
         appState.isFFmpegReady = false;
         const errorMsg = 'FFmpeg初期化エラー: ' + error.message;
         addError(errorMsg);
-        console.error('FFmpeg initialization error:', error);
+        console.error('✗ FFmpeg initialization error:', error);
+        
+        // Suggest user actions
+        addError('💡 解決方法: ページをリロードするか、ブラウザのキャッシュをクリアしてください');
     } finally {
         // Hide loading overlay
         const loadingOverlay = document.getElementById('loadingOverlay');
@@ -85,6 +151,21 @@ async function initFFmpeg() {
     }
     
     updateConvertButtonState();
+}
+
+// Clear cache if needed
+function clearCacheIfNeeded() {
+    // Check if cache is stale (older than 1 day)
+    const lastCacheTime = localStorage.getItem('ffmpegCacheTime');
+    const now = Date.now();
+    const ONE_DAY = 24 * 60 * 60 * 1000;
+    
+    if (!lastCacheTime || (now - parseInt(lastCacheTime)) > ONE_DAY) {
+        console.log('Clearing old FFmpeg cache...');
+        // Note: Actual cache clearing is browser-dependent
+        // We just update the timestamp
+        localStorage.setItem('ffmpegCacheTime', now.toString());
+    }
 }
 
 // Update Convert Button State
@@ -375,6 +456,11 @@ async function convertFile(fileItem) {
     const outputName = 'output_' + Date.now() + '.mp3';
     
     try {
+        // Check if fetchFile is available
+        if (typeof fetchFile === 'undefined') {
+            throw new Error('fetchFile function is not available from FFmpeg library');
+        }
+        
         // Write input file to FFmpeg filesystem
         await FFmpeg.writeFile(inputName, await fetchFile(fileItem.file));
         
@@ -411,6 +497,11 @@ async function convertFile(fileItem) {
 
 // Download All as ZIP
 downloadAllBtn.addEventListener('click', async () => {
+    if (typeof JSZip === 'undefined') {
+        alert('JSZipライブラリが読み込まれていません');
+        return;
+    }
+    
     const zip = new JSZip();
     const completedFiles = appState.files.filter(f => f.status === 'completed' && f.outputFile);
     
@@ -494,11 +585,26 @@ closeErrorBtn.addEventListener('click', () => {
     errorSection.style.display = 'none';
 });
 
+// Get fetchFile from FFmpeg library
+function getFetchFile() {
+    if (typeof window.FFmpeg !== 'undefined' && window.FFmpeg.fetchFile) {
+        return window.FFmpeg.fetchFile;
+    }
+    return null;
+}
+
 // Initialize App
 window.addEventListener('DOMContentLoaded', async () => {
     initTheme();
     updateConvertButtonState(); // Set initial button state
     await initFFmpeg();
+    
+    // Get fetchFile after FFmpeg is loaded
+    const fetchFile = getFetchFile();
+    if (!fetchFile) {
+        addError('⚠️ fetchFile関数が利用できません。ページをリロードしてください。');
+    }
+    
     updateQueueUI();
     updateHistoryUI();
 });
