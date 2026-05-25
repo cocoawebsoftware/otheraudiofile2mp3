@@ -109,62 +109,19 @@
         <div style="background: white; padding: 30px; border-radius: 12px; text-align: center;">
             <div style="font-size: 2rem; margin-bottom: 15px;">⏳</div>
             <p style="font-size: 1.1rem; margin: 0;">FFmpeg を読み込み中...</p>
-            <p style="font-size: 0.9rem; color: #666; margin-top: 10px;">初回のみ数秒～数十秒かかります</p>
+            <p style="font-size: 0.9rem; color: #666; margin-top: 10px;">初回のみ数秒かかります</p>
         </div>
     </div>
 
-    <!-- Scripts: Load external libraries with multiple CDN sources and fallbacks -->
-    <!-- FFmpeg.wasm core library (Primary: jsDelivr) -->
-    <script async src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/FFmpeg.js" 
-            onerror="loadFFmpegFallback()"></script>
+    <!-- Scripts -->
+    <!-- Load JSZip from local or CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" 
+            onerror="this.src='assets/jszip.min.js'"></script>
     
-    <!-- Fallback FFmpeg sources (only loaded if primary fails) -->
-    <script>
-        function loadFFmpegFallback() {
-            console.warn('Primary FFmpeg CDN failed, trying fallback...');
-            const fallbacks = [
-                'https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/FFmpeg.js',
-                'https://cdnjs.cloudflare.com/ajax/libs/ffmpeg.js/0.12.10/FFmpeg.min.js'
-            ];
-            
-            for (let url of fallbacks) {
-                const script = document.createElement('script');
-                script.async = true;
-                script.src = url;
-                script.onerror = function() {
-                    console.warn(`Fallback FFmpeg CDN failed: ${url}`);
-                };
-                document.body.appendChild(script);
-            }
-        }
-    </script>
+    <!-- Load FFmpeg from local files (do not load from CDN to ensure local hosting) -->
+    <script src="assets/ffmpeg/ffmpeg.min.js" defer></script>
     
-    <!-- JSZip library (Primary: cdnjs) -->
-    <script async src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"
-            onerror="loadJSZipFallback()"></script>
-    
-    <!-- Fallback JSZip sources (only loaded if primary fails) -->
-    <script>
-        function loadJSZipFallback() {
-            console.warn('Primary JSZip CDN failed, trying fallback...');
-            const fallbacks = [
-                'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js',
-                'https://unpkg.com/jszip@3.10.1/dist/jszip.min.js'
-            ];
-            
-            for (let url of fallbacks) {
-                const script = document.createElement('script');
-                script.async = true;
-                script.src = url;
-                script.onerror = function() {
-                    console.warn(`Fallback JSZip CDN failed: ${url}`);
-                };
-                document.body.appendChild(script);
-            }
-        }
-    </script>
-    
-    <!-- Our application script (loaded last, after external libraries) -->
-    <script defer src="script.js"></script>
+    <!-- Load application script -->
+    <script src="script.js" defer></script>
 </body>
 </html>
