@@ -1,127 +1,300 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Audio → MP3 コンバーター</title>
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MP3 Converter</title>
+
+<style>
+body{
+    margin:0;
+    background:#111;
+    color:white;
+    font-family:sans-serif;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    min-height:100vh;
+}
+
+.container{
+    width:460px;
+    background:#1b1b1b;
+    padding:25px;
+    border-radius:18px;
+    box-shadow:0 0 25px rgba(0,0,0,.5);
+}
+
+h1{
+    text-align:center;
+    margin-top:0;
+}
+
+#drop{
+    border:2px dashed #555;
+    border-radius:14px;
+    padding:40px 20px;
+    margin:20px 0;
+    text-align:center;
+    transition:.2s;
+    cursor:pointer;
+}
+
+#drop.drag{
+    border-color:#00bfff;
+    background:#1b2a33;
+}
+
+button{
+    width:100%;
+    background:#00aaff;
+    border:none;
+    color:white;
+    padding:14px;
+    border-radius:12px;
+    cursor:pointer;
+    font-size:16px;
+    margin-top:10px;
+}
+
+button:hover{
+    background:#0088cc;
+}
+
+#fileList{
+    margin-top:20px;
+}
+
+/* 変換前 */
+.file-before{
+    background:#202020;
+    border:1px solid #444;
+    padding:12px;
+    border-radius:10px;
+    margin-bottom:10px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+/* 変換後 */
+.file-after{
+    background:#132013;
+    border:1px solid #2ecc71;
+    padding:12px;
+    border-radius:10px;
+    margin-bottom:10px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.name{
+    font-size:14px;
+    word-break:break-all;
+    max-width:75%;
+}
+
+.status{
+    font-size:13px;
+}
+
+.done{
+    color:#2ecc71;
+    font-weight:bold;
+}
+
+.wait{
+    color:#aaa;
+}
+
+.fail{
+    color:#ff5555;
+}
+
+a{
+    display:block;
+    margin-top:20px;
+    text-align:center;
+    color:#00ccff;
+    font-weight:bold;
+}
+</style>
 </head>
 <body>
-    <div class="container">
-        <!-- Header -->
-        <header class="header">
-            <div class="header-content">
-                <h1>🎵 Audio → MP3 コンバーター</h1>
-                <p class="subtitle">様々な音声ファイルをMP3に変換</p>
-            </div>
-            <button id="themeToggle" class="theme-toggle" title="ダークモード切り替え">
-                🌙
-            </button>
-        </header>
 
-        <!-- Main Content -->
-        <main class="main-content">
-            <!-- Upload Area -->
-            <section class="upload-section">
-                <div id="dropZone" class="drop-zone">
-                    <div class="drop-icon">📁</div>
-                    <h2>ファイルをドラッグ＆ドロップ</h2>
-                    <p>または</p>
-                    <button id="selectFileBtn" class="btn btn-primary">ファイルを選択</button>
-                    <input type="file" id="fileInput" multiple accept=".wav,.ogg,.flac,.aac,.m4a,.wma,.awa,.mp4,.webm" hidden>
-                    <p class="supported-formats">対応形式: WAV, OGG, FLAC, AAC, M4A, WMA, AWA, MP4, WEBM</p>
-                </div>
-            </section>
+<div class="container">
 
-            <!-- Settings Section -->
-            <section class="settings-section">
-                <div class="setting-group">
-                    <label for="bitrate">ビットレート選択:</label>
-                    <select id="bitrate" class="bitrate-select">
-                        <option value="128">128 kbps (低品質・小サイズ)</option>
-                        <option value="192" selected>192 kbps (標準品質)</option>
-                        <option value="320">320 kbps (高品質・大サイズ)</option>
-                    </select>
-                </div>
-            </section>
+    <h1>MP3 Converter</h1>
 
-            <!-- Queue Section -->
-            <section class="queue-section">
-                <div class="queue-header">
-                    <h3>変換キュー</h3>
-                    <span id="queueCount" class="queue-count">0 ファイル</span>
-                </div>
-                <div id="fileQueue" class="file-queue">
-                    <p class="empty-message">ファイルが追加されていません</p>
-                </div>
-            </section>
-
-            <!-- Convert Button -->
-            <section class="action-section">
-                <button id="convertBtn" class="btn btn-success" disabled>
-                    ✓ 変換を開始
-                </button>
-                <button id="cancelBtn" class="btn btn-danger" style="display: none;">
-                    ✕ 変換をキャンセル
-                </button>
-                <button id="downloadAllBtn" class="btn btn-info" style="display: none;">
-                    ⬇ ZIP で一括ダウンロード
-                </button>
-            </section>
-
-            <!-- Progress Section -->
-            <section id="progressSection" class="progress-section" style="display: none;">
-                <div class="progress-item">
-                    <div class="progress-header">
-                        <span id="progressFileName"></span>
-                        <span id="progressPercent">0%</span>
-                    </div>
-                    <div class="progress-bar-container">
-                        <div id="progressBar" class="progress-bar"></div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- History Section -->
-            <section class="history-section">
-                <div class="history-header">
-                    <h3>変換履歴</h3>
-                    <button id="clearHistoryBtn" class="btn btn-small">履歴をクリア</button>
-                </div>
-                <div id="historyList" class="history-list">
-                    <p class="empty-message">変換履歴がありません</p>
-                </div>
-            </section>
-        </main>
-
-        <!-- Error Log -->
-        <section id="errorSection" class="error-section" style="display: none;">
-            <div class="error-header">
-                <h3>⚠️ エラーログ</h3>
-                <button id="closeErrorBtn" class="btn btn-small">閉じる</button>
-            </div>
-            <div id="errorLog" class="error-log"></div>
-        </section>
+    <div id="drop">
+        ドラッグ＆ドロップ<br>
+        またはクリック
     </div>
 
-    <!-- Loading Indicator -->
-    <div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; justify-content: center;">
-        <div style="background: white; padding: 30px; border-radius: 12px; text-align: center;">
-            <div style="font-size: 2rem; margin-bottom: 15px;">⏳</div>
-            <p style="font-size: 1.1rem; margin: 0;">FFmpeg を読み込み中...</p>
-            <p style="font-size: 0.9rem; color: #666; margin-top: 10px;">初回のみ数秒かかります</p>
-        </div>
-    </div>
+    <input type="file" id="fileInput" multiple hidden>
 
-    <!-- Scripts -->
-    <!-- Load JSZip from local or CDN -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" 
-            onerror="this.src='assets/jszip.min.js'"></script>
-    
-    <!-- Load FFmpeg from local files (do not load from CDN to ensure local hosting) -->
-    <script src="assets/ffmpeg/ffmpeg.min.js" defer></script>
-    
-    <!-- Load application script -->
-    <script src="script.js" defer></script>
+    <button id="convertBtn">MP3変換</button>
+
+    <div id="fileList"></div>
+
+    <a id="downloadZip" style="display:none;">
+        ZIPダウンロード
+    </a>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.6/dist/ffmpeg.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+
+<script>
+
+const drop = document.getElementById("drop");
+const input = document.getElementById("fileInput");
+const fileList = document.getElementById("fileList");
+const convertBtn = document.getElementById("convertBtn");
+const downloadZip = document.getElementById("downloadZip");
+
+let files = [];
+
+drop.onclick = () => input.click();
+
+input.onchange = e => {
+    addFiles([...e.target.files]);
+};
+
+drop.addEventListener("dragover", e => {
+    e.preventDefault();
+    drop.classList.add("drag");
+});
+
+drop.addEventListener("dragleave", () => {
+    drop.classList.remove("drag");
+});
+
+drop.addEventListener("drop", e => {
+
+    e.preventDefault();
+
+    drop.classList.remove("drag");
+
+    addFiles([...e.dataTransfer.files]);
+});
+
+function addFiles(newFiles){
+
+    files.push(...newFiles);
+
+    renderFiles();
+}
+
+function renderFiles(){
+
+    fileList.innerHTML = "";
+
+    files.forEach((file, index) => {
+
+        const div = document.createElement("div");
+
+        div.className = "file-before";
+
+        div.id = "file-" + index;
+
+        div.innerHTML = `
+            <div class="name">📄 ${file.name}</div>
+            <div class="status wait">待機中</div>
+        `;
+
+        fileList.appendChild(div);
+    });
+}
+
+convertBtn.onclick = async () => {
+
+    if(files.length === 0){
+        alert("ファイルを追加してください");
+        return;
+    }
+
+    const { FFmpeg } = FFmpegWASM;
+
+    const ffmpeg = new FFmpeg();
+
+    convertBtn.disabled = true;
+    convertBtn.textContent = "読み込み中...";
+
+    await ffmpeg.load();
+
+    const zip = new JSZip();
+
+    convertBtn.textContent = "変換中...";
+
+    for(let i=0;i<files.length;i++){
+
+        const file = files[i];
+
+        const ui = document.getElementById("file-" + i);
+
+        try{
+
+            ui.querySelector(".status").textContent = "変換中...";
+
+            const inputName = file.name;
+
+            const outputName =
+                file.name.replace(/\.[^/.]+$/, "") + ".mp3";
+
+            const data =
+                new Uint8Array(await file.arrayBuffer());
+
+            await ffmpeg.writeFile(inputName, data);
+
+            await ffmpeg.exec([
+                "-i", inputName,
+                "-vn",
+                "-codec:a", "libmp3lame",
+                "-q:a", "2",
+                outputName
+            ]);
+
+            const out = await ffmpeg.readFile(outputName);
+
+            zip.file(outputName, out);
+
+            ui.className = "file-after";
+
+            ui.innerHTML = `
+                <div class="name">🎵 ${outputName}</div>
+                <div class="status done">変換完了</div>
+            `;
+
+        }catch(err){
+
+            console.error(err);
+
+            ui.innerHTML = `
+                <div class="name">❌ ${file.name}</div>
+                <div class="status fail">失敗</div>
+            `;
+        }
+    }
+
+    convertBtn.textContent = "ZIP作成中...";
+
+    const blob = await zip.generateAsync({
+        type:"blob"
+    });
+
+    const url = URL.createObjectURL(blob);
+
+    downloadZip.href = url;
+    downloadZip.download = "mp3_files.zip";
+    downloadZip.style.display = "block";
+
+    convertBtn.textContent = "変換完了";
+};
+
+</script>
+
 </body>
 </html>
