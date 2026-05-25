@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio → MP3 コンバーター</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1>🎵 Audio → MP3 コンバーター</h1>
+                <p class="subtitle">様々な音声ファイルをMP3に変換</p>
+            </div>
+            <button id="themeToggle" class="theme-toggle" title="ダークモード切り替え">
+                🌙
+            </button>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Upload Area -->
+            <section class="upload-section">
+                <div id="dropZone" class="drop-zone">
+                    <div class="drop-icon">📁</div>
+                    <h2>ファイルをドラッグ＆ドロップ</h2>
+                    <p>または</p>
+                    <button id="selectFileBtn" class="btn btn-primary">ファイルを選択</button>
+                    <input type="file" id="fileInput" multiple accept=".wav,.ogg,.flac,.aac,.m4a,.wma,.awa,.mp4,.webm" hidden>
+                    <p class="supported-formats">対応形式: WAV, OGG, FLAC, AAC, M4A, WMA, AWA, MP4, WEBM</p>
+                </div>
+            </section>
+
+            <!-- Settings Section -->
+            <section class="settings-section">
+                <div class="setting-group">
+                    <label for="bitrate">ビットレート選択:</label>
+                    <select id="bitrate" class="bitrate-select">
+                        <option value="128">128 kbps (低品質・小サイズ)</option>
+                        <option value="192" selected>192 kbps (標準品質)</option>
+                        <option value="320">320 kbps (高品質・大サイズ)</option>
+                    </select>
+                </div>
+            </section>
+
+            <!-- Queue Section -->
+            <section class="queue-section">
+                <div class="queue-header">
+                    <h3>変換キュー</h3>
+                    <span id="queueCount" class="queue-count">0 ファイル</span>
+                </div>
+                <div id="fileQueue" class="file-queue">
+                    <p class="empty-message">ファイルが追加されていません</p>
+                </div>
+            </section>
+
+            <!-- Convert Button -->
+            <section class="action-section">
+                <button id="convertBtn" class="btn btn-success" disabled>
+                    ✓ 変換を開始
+                </button>
+                <button id="cancelBtn" class="btn btn-danger" style="display: none;">
+                    ✕ 変換をキャンセル
+                </button>
+                <button id="downloadAllBtn" class="btn btn-info" style="display: none;">
+                    ⬇ ZIP で一括ダウンロード
+                </button>
+            </section>
+
+            <!-- Progress Section -->
+            <section id="progressSection" class="progress-section" style="display: none;">
+                <div class="progress-item">
+                    <div class="progress-header">
+                        <span id="progressFileName"></span>
+                        <span id="progressPercent">0%</span>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div id="progressBar" class="progress-bar"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- History Section -->
+            <section class="history-section">
+                <div class="history-header">
+                    <h3>変換履歴</h3>
+                    <button id="clearHistoryBtn" class="btn btn-small">履歴をクリア</button>
+                </div>
+                <div id="historyList" class="history-list">
+                    <p class="empty-message">変換履歴がありません</p>
+                </div>
+            </section>
+        </main>
+
+        <!-- Error Log -->
+        <section id="errorSection" class="error-section" style="display: none;">
+            <div class="error-header">
+                <h3>⚠️ エラーログ</h3>
+                <button id="closeErrorBtn" class="btn btn-small">閉じる</button>
+            </div>
+            <div id="errorLog" class="error-log"></div>
+        </section>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/FFmpeg.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
