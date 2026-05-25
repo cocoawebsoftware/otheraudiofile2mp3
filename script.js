@@ -14,6 +14,23 @@ const appState = {
     isFFmpegLoading: false,
 };
 
+// Wait for FFmpeg library to load
+function waitForFFmpegLib(timeout = 10000) {
+    return new Promise((resolve, reject) => {
+        const startTime = Date.now();
+        
+        const checkFFmpeg = setInterval(() => {
+            if (typeof window.FFmpeg !== 'undefined' && window.FFmpeg.FFmpeg) {
+                clearInterval(checkFFmpeg);
+                resolve();
+            } else if (Date.now() - startTime > timeout) {
+                clearInterval(checkFFmpeg);
+                reject(new Error('FFmpeg library failed to load within timeout'));
+            }
+        }, 100);
+    });
+}
+
 // Initialize FFmpeg
 async function initFFmpeg() {
     if (appState.isFFmpegLoading) return; // Prevent multiple initializations
@@ -22,10 +39,26 @@ async function initFFmpeg() {
     updateConvertButtonState();
     
     try {
+        // Show loading overlay
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        if (loadingOverlay) {
+            loadingOverlay.style.display = 'flex';
+        }
+        
         // Show loading message
         convertBtn.textContent = '📥 FFmpeg読み込み中...';
         
-        FFmpeg = new FFmpegLib.FFmpeg();
+        // Wait for FFmpeg library to be available
+        console.log('Waiting for FFmpeg library...');
+        await waitForFFmpegLib(10000);
+        
+        // Check if FFmpegLib is available
+        if (!window.FFmpeg || !window.FFmpeg.FFmpeg) {
+            throw new Error('FFmpeg library not found in window object');
+        }
+        
+        console.log('FFmpeg library found, initializing...');
+        FFmpeg = new window.FFmpeg.FFmpeg();
         const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist';
         
         await FFmpeg.load({
@@ -43,6 +76,12 @@ async function initFFmpeg() {
         const errorMsg = 'FFmpeg初期化エラー: ' + error.message;
         addError(errorMsg);
         console.error('FFmpeg initialization error:', error);
+    } finally {
+        // Hide loading overlay
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        if (loadingOverlay) {
+            loadingOverlay.style.display = 'none';
+        }
     }
     
     updateConvertButtonState();
