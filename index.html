@@ -7,30 +7,13 @@
 <style>
 body{margin:0;background:#111;color:#fff;font-family:sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh}
 .container{width:500px;background:#1b1b1b;padding:25px;border-radius:18px;box-shadow:0 0 25px rgba(0,0,0,.5)}
-h1{text-align:center;margin-top:0}
-#drop{border:2px dashed #555;border-radius:14px;padding:35px 20px;margin:20px 0;text-align:center;transition:.2s;cursor:pointer;line-height:1.8}
-#drop.drag{border-color:#00bfff;background:#1b2a33}
-.support{margin-top:10px;color:#aaa;font-size:13px}
-button{width:100%;background:#00aaff;border:none;color:#fff;padding:14px;border-radius:12px;cursor:pointer;font-size:16px;margin-top:10px}
-button:hover{background:#0088cc}
-#fileList{margin-top:20px}
-.file-before{background:#202020;border:1px solid #444;padding:12px;border-radius:10px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
-.file-after{background:#132013;border:1px solid #2ecc71;padding:12px;border-radius:10px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
-.name{font-size:14px;word-break:break-all;max-width:75%}
-.status{font-size:13px}.done{color:#2ecc71;font-weight:bold}.wait{color:#aaa}.fail{color:#ff5555}
-a{display:block;margin-top:20px;text-align:center;color:#00ccff;font-weight:bold}
+h1{text-align:center;margin-top:0}#drop{border:2px dashed #555;border-radius:14px;padding:35px 20px;margin:20px 0;text-align:center;transition:.2s;cursor:pointer;line-height:1.8}#drop.drag{border-color:#00bfff;background:#1b2a33}.support{margin-top:10px;color:#aaa;font-size:13px}button{width:100%;background:#00aaff;border:none;color:#fff;padding:14px;border-radius:12px;cursor:pointer;font-size:16px;margin-top:10px}button:hover{background:#0088cc}#fileList{margin-top:20px}.file-before{background:#202020;border:1px solid #444;padding:12px;border-radius:10px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}.file-after{background:#132013;border:1px solid #2ecc71;padding:12px;border-radius:10px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}.name{font-size:14px;word-break:break-all;max-width:75%}.status{font-size:13px}.done{color:#2ecc71;font-weight:bold}.wait{color:#aaa}.fail{color:#ff5555}a{display:block;margin-top:20px;text-align:center;color:#00ccff;font-weight:bold}
 </style>
 </head>
 <body>
 <div class="container">
 <h1>MP3 Converter</h1>
-<div id="drop">
-ドラッグ＆ドロップ<br>またはクリック
-<div class="support">
-対応形式:<br>
-AAC / ADTS / M4A / MP3 / WAV / FLAC / OGG / WEBM / AWA
-</div>
-</div>
+<div id="drop">ドラッグ＆ドロップ<br>またはクリック<div class="support">対応形式:<br>AAC / ADTS / M4A / MP3 / WAV / FLAC / OGG / WEBM / AWA</div></div>
 <input type="file" id="fileInput" multiple accept=".aac,.adts,.m4a,.mp3,.wav,.flac,.ogg,.webm,.awa,audio/*" hidden>
 <button id="convertBtn">MP3変換</button>
 <div id="fileList"></div>
@@ -42,7 +25,7 @@ AAC / ADTS / M4A / MP3 / WAV / FLAC / OGG / WEBM / AWA
 const { createFFmpeg, fetchFile } = FFmpeg;
 const ffmpeg = createFFmpeg({
 log:false,
-corePath:'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js'
+corePath:'https://unpkg.com/@ffmpeg/core-st@0.11.0/dist/ffmpeg-core.js'
 });
 const drop=document.getElementById('drop');
 const input=document.getElementById('fileInput');
@@ -50,16 +33,16 @@ const fileList=document.getElementById('fileList');
 const convertBtn=document.getElementById('convertBtn');
 const downloadZip=document.getElementById('downloadZip');
 let files=[];
-drop.addEventListener('click',()=>input.click());
-input.addEventListener('change',e=>addFiles([...e.target.files]));
-drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('drag')});
-drop.addEventListener('dragleave',()=>drop.classList.remove('drag'));
-drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('drag');addFiles([...e.dataTransfer.files])});
+drop.onclick=()=>input.click();
+input.onchange=e=>addFiles([...e.target.files]);
+drop.ondragover=e=>{e.preventDefault();drop.classList.add('drag')};
+drop.ondragleave=()=>drop.classList.remove('drag');
+drop.ondrop=e=>{e.preventDefault();drop.classList.remove('drag');addFiles([...e.dataTransfer.files])};
 function addFiles(newFiles){files.push(...newFiles);renderFiles()}
 function renderFiles(){fileList.innerHTML='';files.forEach((file,index)=>{const div=document.createElement('div');div.className='file-before';div.id='file-'+index;div.innerHTML=`<div class="name">📄 ${file.name}</div><div class="status wait">待機中</div>`;fileList.appendChild(div)})}
-async function convertAWA(file){return await fetchFile(file)}
-convertBtn.addEventListener('click',async()=>{
+convertBtn.onclick=async()=>{
 if(files.length===0){alert('ファイルを追加してください');return}
+try{
 convertBtn.disabled=true;
 convertBtn.textContent='ffmpeg読込中...';
 if(!ffmpeg.isLoaded()) await ffmpeg.load();
@@ -72,9 +55,7 @@ try{
 ui.querySelector('.status').textContent='変換中...';
 const inputName=file.name;
 const outputName=file.name.replace(/\.[^/.]+$/,'')+'.mp3';
-let data;
-if(file.name.toLowerCase().endsWith('.awa')) data=await convertAWA(file); else data=await fetchFile(file);
-ffmpeg.FS('writeFile',inputName,data);
+ffmpeg.FS('writeFile',inputName,await fetchFile(file));
 await ffmpeg.run('-i',inputName,'-vn','-codec:a','libmp3lame','-q:a','2',outputName);
 const out=ffmpeg.FS('readFile',outputName);
 zip.file(outputName,out);
@@ -93,8 +74,12 @@ downloadZip.href=url;
 downloadZip.download='mp3_files.zip';
 downloadZip.style.display='block';
 convertBtn.textContent='変換完了';
+}catch(e){
+alert('FFmpeg読込失敗: '+e.message);
+console.error(e);
+}
 convertBtn.disabled=false;
-});
+};
 </script>
 </body>
 </html>
