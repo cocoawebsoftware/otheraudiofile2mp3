@@ -4,304 +4,96 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MP3 Converter</title>
-
 <style>
-body{
-    margin:0;
-    background:#111;
-    color:white;
-    font-family:sans-serif;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    min-height:100vh;
-}
-
-.container{
-    width:460px;
-    background:#1b1b1b;
-    padding:25px;
-    border-radius:18px;
-    box-shadow:0 0 25px rgba(0,0,0,.5);
-}
-
-h1{
-    text-align:center;
-    margin-top:0;
-}
-
-#drop{
-    border:2px dashed #555;
-    border-radius:14px;
-    padding:40px 20px;
-    margin:20px 0;
-    text-align:center;
-    transition:.2s;
-    cursor:pointer;
-}
-
-#drop.drag{
-    border-color:#00bfff;
-    background:#1b2a33;
-}
-
-button{
-    width:100%;
-    background:#00aaff;
-    border:none;
-    color:white;
-    padding:14px;
-    border-radius:12px;
-    cursor:pointer;
-    font-size:16px;
-    margin-top:10px;
-}
-
-button:hover{
-    background:#0088cc;
-}
-
-#fileList{
-    margin-top:20px;
-}
-
-/* 変換前 */
-.file-before{
-    background:#202020;
-    border:1px solid #444;
-    padding:12px;
-    border-radius:10px;
-    margin-bottom:10px;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-}
-
-/* 変換後 */
-.file-after{
-    background:#132013;
-    border:1px solid #2ecc71;
-    padding:12px;
-    border-radius:10px;
-    margin-bottom:10px;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-}
-
-.name{
-    font-size:14px;
-    word-break:break-all;
-    max-width:75%;
-}
-
-.status{
-    font-size:13px;
-}
-
-.done{
-    color:#2ecc71;
-    font-weight:bold;
-}
-
-.wait{
-    color:#aaa;
-}
-
-.fail{
-    color:#ff5555;
-}
-
-a{
-    display:block;
-    margin-top:20px;
-    text-align:center;
-    color:#00ccff;
-    font-weight:bold;
-}
+body{margin:0;background:#111;color:#fff;font-family:sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh}
+.container{width:500px;background:#1b1b1b;padding:25px;border-radius:18px;box-shadow:0 0 25px rgba(0,0,0,.5)}
+h1{text-align:center;margin-top:0}
+#drop{border:2px dashed #555;border-radius:14px;padding:35px 20px;margin:20px 0;text-align:center;transition:.2s;cursor:pointer;line-height:1.8}
+#drop.drag{border-color:#00bfff;background:#1b2a33}
+.support{margin-top:10px;color:#aaa;font-size:13px}
+button{width:100%;background:#00aaff;border:none;color:#fff;padding:14px;border-radius:12px;cursor:pointer;font-size:16px;margin-top:10px}
+button:hover{background:#0088cc}
+#fileList{margin-top:20px}
+.file-before{background:#202020;border:1px solid #444;padding:12px;border-radius:10px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.file-after{background:#132013;border:1px solid #2ecc71;padding:12px;border-radius:10px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.name{font-size:14px;word-break:break-all;max-width:75%}
+.status{font-size:13px}.done{color:#2ecc71;font-weight:bold}.wait{color:#aaa}.fail{color:#ff5555}
+a{display:block;margin-top:20px;text-align:center;color:#00ccff;font-weight:bold}
 </style>
 </head>
 <body>
-
 <div class="container">
-
-    <h1>MP3 Converter</h1>
-
-    <div id="drop">
-        ドラッグ＆ドロップ<br>
-        またはクリック
-    </div>
-
-    <input type="file" id="fileInput" multiple hidden>
-
-    <button id="convertBtn">MP3変換</button>
-
-    <div id="fileList"></div>
-
-    <a id="downloadZip" style="display:none;">
-        ZIPダウンロード
-    </a>
-
+<h1>MP3 Converter</h1>
+<div id="drop">
+ドラッグ＆ドロップ<br>またはクリック
+<div class="support">
+対応形式:<br>
+AAC / ADTS / M4A / MP3 / WAV / FLAC / OGG / WEBM / AWA
 </div>
-
-<!-- 修正版 -->
-<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
-
+</div>
+<input type="file" id="fileInput" multiple accept=".aac,.adts,.m4a,.mp3,.wav,.flac,.ogg,.webm,.awa,audio/*" hidden>
+<button id="convertBtn">MP3変換</button>
+<div id="fileList"></div>
+<a id="downloadZip" style="display:none;">ZIPダウンロード</a>
+</div>
+<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.6/dist/umd/ffmpeg.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-
 <script>
-
-const drop = document.getElementById("drop");
-const input = document.getElementById("fileInput");
-const fileList = document.getElementById("fileList");
-const convertBtn = document.getElementById("convertBtn");
-const downloadZip = document.getElementById("downloadZip");
-
-let files = [];
-
-drop.onclick = () => input.click();
-
-input.onchange = e => {
-    addFiles([...e.target.files]);
-};
-
-drop.addEventListener("dragover", e => {
-    e.preventDefault();
-    drop.classList.add("drag");
+const { createFFmpeg, fetchFile } = FFmpeg;
+const ffmpeg = createFFmpeg({
+log:false,
+corePath:'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js'
 });
-
-drop.addEventListener("dragleave", () => {
-    drop.classList.remove("drag");
-});
-
-drop.addEventListener("drop", e => {
-
-    e.preventDefault();
-
-    drop.classList.remove("drag");
-
-    addFiles([...e.dataTransfer.files]);
-});
-
-function addFiles(newFiles){
-
-    files.push(...newFiles);
-
-    renderFiles();
+const drop=document.getElementById('drop');
+const input=document.getElementById('fileInput');
+const fileList=document.getElementById('fileList');
+const convertBtn=document.getElementById('convertBtn');
+const downloadZip=document.getElementById('downloadZip');
+let files=[];
+drop.onclick=()=>input.click();
+input.onchange=e=>addFiles([...e.target.files]);
+drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('drag')});
+drop.addEventListener('dragleave',()=>drop.classList.remove('drag'));
+drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('drag');addFiles([...e.dataTransfer.files])});
+function addFiles(newFiles){files.push(...newFiles);renderFiles()}
+function renderFiles(){fileList.innerHTML='';files.forEach((file,index)=>{const div=document.createElement('div');div.className='file-before';div.id='file-'+index;div.innerHTML=`<div class="name">📄 ${file.name}</div><div class="status wait">待機中</div>`;fileList.appendChild(div)})}
+async function convertAWA(file){return await fetchFile(file)}
+convertBtn.onclick=async()=>{
+if(files.length===0){alert('ファイルを追加してください');return}
+convertBtn.disabled=true;
+convertBtn.textContent='ffmpeg読込中...';
+if(!ffmpeg.isLoaded()) await ffmpeg.load();
+const zip=new JSZip();
+convertBtn.textContent='変換中...';
+for(let i=0;i<files.length;i++){
+const file=files[i];
+const ui=document.getElementById('file-'+i);
+try{
+ui.querySelector('.status').textContent='変換中...';
+const inputName=file.name;
+const outputName=file.name.replace(/\.[^/.]+$/,'')+'.mp3';
+let data;
+if(file.name.toLowerCase().endsWith('.awa')) data=await convertAWA(file); else data=await fetchFile(file);
+ffmpeg.FS('writeFile',inputName,data);
+await ffmpeg.run('-i',inputName,'-vn','-codec:a','libmp3lame','-q:a','2',outputName);
+const out=ffmpeg.FS('readFile',outputName);
+zip.file(outputName,out);
+ui.className='file-after';
+ui.innerHTML=`<div class="name">🎵 ${outputName}</div><div class="status done">変換完了</div>`;
+}catch(err){
+console.error(err);
+ui.className='file-before';
+ui.innerHTML=`<div class="name">❌ ${file.name}</div><div class="status fail">失敗</div>`;
 }
-
-function renderFiles(){
-
-    fileList.innerHTML = "";
-
-    files.forEach((file, index) => {
-
-        const div = document.createElement("div");
-
-        div.className = "file-before";
-
-        div.id = "file-" + index;
-
-        div.innerHTML = `
-            <div class="name">📄 ${file.name}</div>
-            <div class="status wait">待機中</div>
-        `;
-
-        fileList.appendChild(div);
-    });
 }
-
-convertBtn.onclick = async () => {
-
-    if(files.length === 0){
-        alert("ファイルを追加してください");
-        return;
-    }
-
-    convertBtn.disabled = true;
-    convertBtn.textContent = "ffmpeg読込中...";
-
-    const ffmpeg = new FFmpeg.FFmpeg();
-
-    await ffmpeg.load({
-        coreURL:
-            "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js"
-    });
-
-    const zip = new JSZip();
-
-    convertBtn.textContent = "変換中...";
-
-    for(let i=0;i<files.length;i++){
-
-        const file = files[i];
-
-        const ui = document.getElementById("file-" + i);
-
-        try{
-
-            ui.querySelector(".status").textContent = "変換中...";
-
-            const inputName = file.name;
-
-            const outputName =
-                file.name.replace(/\.[^/.]+$/, "") + ".mp3";
-
-            const data = new Uint8Array(
-                await file.arrayBuffer()
-            );
-
-            await ffmpeg.writeFile(inputName, data);
-
-            await ffmpeg.exec([
-                "-i", inputName,
-                "-vn",
-                "-codec:a", "libmp3lame",
-                "-q:a", "2",
-                outputName
-            ]);
-
-            const out = await ffmpeg.readFile(outputName);
-
-            zip.file(outputName, out);
-
-            ui.className = "file-after";
-
-            ui.innerHTML = `
-                <div class="name">🎵 ${outputName}</div>
-                <div class="status done">変換完了</div>
-            `;
-
-        }catch(err){
-
-            console.error(err);
-
-            ui.className = "file-before";
-
-            ui.innerHTML = `
-                <div class="name">❌ ${file.name}</div>
-                <div class="status fail">失敗</div>
-            `;
-        }
-    }
-
-    convertBtn.textContent = "ZIP作成中...";
-
-    const blob = await zip.generateAsync({
-        type:"blob"
-    });
-
-    const url = URL.createObjectURL(blob);
-
-    downloadZip.href = url;
-    downloadZip.download = "mp3_files.zip";
-    downloadZip.style.display = "block";
-
-    convertBtn.textContent = "変換完了";
+convertBtn.textContent='ZIP作成中...';
+const blob=await zip.generateAsync({type:'blob'});
+const url=URL.createObjectURL(blob);
+downloadZip.href=url;
+downloadZip.download='mp3_files.zip';
+downloadZip.style.display='block';
+convertBtn.textContent='変換完了';
 };
-
 </script>
-
 </body>
 </html>
