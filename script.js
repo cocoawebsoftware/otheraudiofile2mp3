@@ -10,22 +10,57 @@ const appState = {
     currentConvertIndex: 0,
     errors: [],
     isDarkMode: localStorage.getItem('darkMode') === 'true',
+    isFFmpegReady: false,
+    isFFmpegLoading: false,
 };
 
 // Initialize FFmpeg
 async function initFFmpeg() {
-    FFmpeg = new FFmpegLib.FFmpeg();
-    const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist';
+    if (appState.isFFmpegLoading) return; // Prevent multiple initializations
+    
+    appState.isFFmpegLoading = true;
+    updateConvertButtonState();
     
     try {
+        // Show loading message
+        convertBtn.textContent = '📥 FFmpeg読み込み中...';
+        
+        FFmpeg = new FFmpegLib.FFmpeg();
+        const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist';
+        
         await FFmpeg.load({
             coreURL: `${baseURL}/ffmpeg-core.js`,
             wasmURL: `${baseURL}/ffmpeg-core.wasm`,
         });
+        
+        appState.isFFmpegReady = true;
+        appState.isFFmpegLoading = false;
         console.log('FFmpeg initialized successfully');
+        addError('✓ FFmpegが正常に読み込まれました');
     } catch (error) {
-        addError('FFmpeg初期化エラー: ' + error.message);
+        appState.isFFmpegLoading = false;
+        appState.isFFmpegReady = false;
+        const errorMsg = 'FFmpeg初期化エラー: ' + error.message;
+        addError(errorMsg);
         console.error('FFmpeg initialization error:', error);
+    }
+    
+    updateConvertButtonState();
+}
+
+// Update Convert Button State
+function updateConvertButtonState() {
+    if (appState.isFFmpegLoading) {
+        convertBtn.disabled = true;
+        convertBtn.textContent = '📥 FFmpeg読み込み中...';
+    } else if (!appState.isFFmpegReady) {
+        convertBtn.disabled = true;
+        convertBtn.textContent = '⚠️ FFmpeg初期化失敗';
+    } else if (appState.files.length === 0 || appState.isConverting) {
+        convertBtn.disabled = true;
+    } else {
+        convertBtn.disabled = false;
+        convertBtn.textContent = '✓ 変換を開始';
     }
 }
 
@@ -145,7 +180,7 @@ function formatFileSize(bytes) {
 // Update Queue UI
 function updateQueueUI() {
     queueCount.textContent = `${appState.files.length} ファイル`;
-    convertBtn.disabled = appState.files.length === 0;
+    updateConvertButtonState();
     
     if (appState.files.length === 0) {
         fileQueue.innerHTML = '<p class="empty-message">ファイルが追加されていません</p>';
@@ -200,8 +235,24 @@ convertBtn.addEventListener('click', startConversion);
 cancelBtn.addEventListener('click', cancelConversion);
 
 async function startConversion() {
+    // Safety checks
+    if (!appState.isFFmpegReady) {
+        addError('❌ FFmpegが準備できていません。ページをリロードしてください。');
+        return;
+    }
+    
+    if (!FFmpeg || typeof FFmpeg.isLoaded !== 'function') {
+        addError('❌ FFmpeg object is not properly initialized');
+        return;
+    }
+    
     if (!FFmpeg.isLoaded()) {
-        addError('FFmpegがまだ読み込まれていません');
+        addError('❌ FFmpegがまだ読み込まれていません');
+        return;
+    }
+    
+    if (appState.files.length === 0) {
+        addError('⚠️ ファイルを追加してください');
         return;
     }
     
@@ -265,6 +316,7 @@ function cancelConversion() {
 }
 
 function finishConversion() {
+    appState.isConverting = false;
     convertBtn.style.display = 'block';
     cancelBtn.style.display = 'none';
     progressSection.style.display = 'none';
@@ -274,6 +326,7 @@ function finishConversion() {
         downloadAllBtn.style.display = 'block';
     }
     
+    updateConvertButtonState();
     updateQueueUI();
 }
 
@@ -405,6 +458,7 @@ closeErrorBtn.addEventListener('click', () => {
 // Initialize App
 window.addEventListener('DOMContentLoaded', async () => {
     initTheme();
+    updateConvertButtonState(); // Set initial button state
     await initFFmpeg();
     updateQueueUI();
     updateHistoryUI();
